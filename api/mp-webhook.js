@@ -3,6 +3,7 @@
 import crypto from 'node:crypto'
 import { MercadoPagoConfig, Payment } from 'mercadopago'
 import { getStore } from '@netlify/blobs'
+import { sendOrderEmails } from '../server/order-email.js'
 
 // Manifest format from the official SDK: "id:<data.id>;request-id:<x-request-id>;ts:<ts>;"
 function verifySignature(req, dataId) {
@@ -34,6 +35,7 @@ function orderRecord(payment) {
     approvedAt: payment.date_approved,
     paymentMethod: payment.payment_method_id,
     delivery: metadata.delivery === 'arrange' ? 'arrange' : 'pickup',
+    shipping: metadata.delivery === 'arrange' ? metadata.shipping || null : null,
     buyer: {
       name: metadata.buyer_name || '',
       email: metadata.buyer_email || payment.payer?.email || '',
@@ -63,7 +65,9 @@ export default async function handler(req) {
     // Separate test and real orders; the payment ID makes webhook retries idempotent.
     // Site-wide stores survive new deployments. Access stays within the Netlify dashboard.
     const orders = getStore(payment.live_mode ? 'orders' : 'orders-test')
-    await orders.setJSON(`payment-${payment.id}`, orderRecord(payment), { onlyIfNew: true })
+    const order = orderRecord(payment)
+    await orders.setJSON(`payment-${payment.id}`, order, { onlyIfNew: true })
+    await sendOrderEmails(order)
     return Response.json({ ok: true })
   } catch (error) {
     console.error('mp-webhook failed', error)

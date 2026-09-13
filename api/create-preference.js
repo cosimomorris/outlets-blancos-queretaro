@@ -2,6 +2,7 @@
 // The client sends product/variant ids and quantities only; every price is re-derived from src/catalog.js.
 import { MercadoPagoConfig, Preference } from 'mercadopago'
 import { products, findVariant } from '../src/catalog.js'
+import { parseShipping } from '../src/shipping.js'
 
 const MAX_LINES = 20
 const MAX_QUANTITY = 99
@@ -54,7 +55,10 @@ export default async function handler(req) {
   if (!buyer) return Response.json({ error: 'bad_buyer' }, { status: 400 })
   const lines = parseCart(body.cart)
   if (!lines) return Response.json({ error: 'bad_cart' }, { status: 400 })
-  const delivery = body.delivery === 'arrange' ? 'arrange' : 'pickup'
+  if (!['pickup', 'arrange'].includes(body.delivery)) return Response.json({ error: 'bad_delivery' }, { status: 400 })
+  const delivery = body.delivery
+  const shipping = delivery === 'arrange' ? parseShipping(body.shipping) : null
+  if (delivery === 'arrange' && !shipping) return Response.json({ error: 'bad_shipping' }, { status: 400 })
 
   const orderId = newOrderId()
   const origin = siteOrigin(req)
@@ -86,6 +90,7 @@ export default async function handler(req) {
         metadata: {
           order_id: orderId,
           delivery,
+          ...(shipping ? { shipping } : {}),
           buyer_name: buyer.name,
           buyer_email: buyer.email,
           buyer_phone: buyer.phone,

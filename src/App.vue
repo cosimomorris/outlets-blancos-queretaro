@@ -9,6 +9,7 @@ import FooterSection from './components/FooterSection.vue'
 import ShopDialog from './components/ShopDialog.vue'
 import ShopIcon from './components/ShopIcon.vue'
 import { products, money, findVariant } from './catalog'
+import { shippingFields, parseShipping } from './shipping'
 
 const storageKey = 'outlet-blancos-cart-v1'
 const pendingKey = 'outlet-blancos-pending-order'
@@ -38,6 +39,7 @@ const total = computed(() => lines.value.reduce((sum, item) => sum + item.quanti
 const cartOpen = ref(false)
 const stage = ref('cart')
 const delivery = ref('pickup')
+const shipping = ref(Object.fromEntries(shippingFields.map(field => [field.key, ''])))
 const buyer = ref({ name: '', email: '', phone: '' })
 const paying = ref(false)
 const payError = ref('')
@@ -45,7 +47,7 @@ const result = ref(null)
 const confirmation = ref({ count: 0, total: 0, orderId: '', paymentId: '' })
 const status = ref('')
 const title = computed(() => stage.value === 'checkout' ? 'Revisa tu pedido' : stage.value === 'complete' ? '¡Pedido confirmado!' : 'Mi carrito')
-const formValid = computed(() => buyer.value.name.trim().length >= 2 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(buyer.value.email.trim()) && buyer.value.phone.replace(/\D/g, '').length >= 10)
+const formValid = computed(() => buyer.value.name.trim().length >= 2 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(buyer.value.email.trim()) && buyer.value.phone.replace(/\D/g, '').length >= 10 && (delivery.value === 'pickup' || Boolean(parseShipping(shipping.value))))
 const gaItems = items => items.map(l => ({ item_id: `${l.id}:${l.variant}`, item_name: l.product?.name ?? l.name, item_variant: l.option?.name ?? l.option, price: l.option?.price ?? l.unit_price, quantity: l.quantity }))
 function track(event, params) { try { window.gtag?.('event', event, params) } catch { /* Analytics must never break checkout. */ } }
 function openCart() { stage.value = 'cart'; result.value = null; cartOpen.value = true }
@@ -72,7 +74,7 @@ async function pay() {
     const response = await fetch('/api/create-preference', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cart: cart.value, buyer: buyer.value, delivery: delivery.value }),
+      body: JSON.stringify({ cart: cart.value, buyer: buyer.value, delivery: delivery.value, shipping: delivery.value === 'arrange' ? shipping.value : null }),
     })
     const data = await response.json().catch(() => ({}))
     if (!response.ok || !data.init_point) throw new Error(data.error || 'request_failed')
@@ -83,7 +85,11 @@ async function pay() {
   } catch (error) {
     payError.value = error.message === 'bad_buyer'
       ? 'Revisa tu nombre, correo y WhatsApp.'
-      : 'No pudimos iniciar el pago. Intenta de nuevo o escríbenos por WhatsApp.'
+      : error.message === 'bad_shipping'
+        ? 'Completa tu dirección de entrega y un código postal de 5 dígitos.'
+        : error.message === 'bad_delivery'
+          ? 'Selecciona una opción de entrega.'
+          : 'No pudimos iniciar el pago. Intenta de nuevo o escríbenos por WhatsApp.'
     paying.value = false
   }
 }
@@ -118,25 +124,29 @@ onMounted(() => {
   <p class="sr-only" role="status">{{ status }}</p>
   <ShopDialog :open="cartOpen" :title="title" drawer @close="cartOpen = false">
     <template v-if="stage === 'complete'">
-      <div class="cart-empty success-state"><div class="success-icon"><ShopIcon name="check" /></div><p class="eyebrow">PAGO RECIBIDO</p><h3>¡Gracias por tu compra!</h3><p>Recibimos tu pago de {{ money(confirmation.total) }} MXN por {{ confirmation.count }} {{ confirmation.count === 1 ? 'artículo' : 'artículos' }}.</p><p v-if="confirmation.orderId || confirmation.paymentId" class="confirmation-total">Pedido {{ confirmation.orderId }}<template v-if="confirmation.paymentId"> · Pago {{ confirmation.paymentId }}</template></p><p>Te contactaremos por WhatsApp para coordinar la entrega.</p><button class="btn btn-primary" @click="cartOpen = false">Seguir explorando <ShopIcon name="arrow" /></button></div>
+      <div class="cart-empty success-state"><div class="success-icon"><ShopIcon name="check" /></div><p class="eyebrow">PAGO RECIBIDO</p><h3>¡Gracias por tu compra!</h3><p>Recibimos tu pago de {{ money(confirmation.total) }} MXN por {{ confirmation.count }} {{ confirmation.count === 1 ? 'artículo' : 'artículos' }}.</p><p v-if="confirmation.orderId || confirmation.paymentId" class="confirmation-total">Pedido {{ confirmation.orderId }}<template v-if="confirmation.paymentId"> · Pago {{ confirmation.paymentId }}</template></p><p>Guarda tu número de pedido. Para coordinar la entrega o tu cita para recoger, <a href="https://wa.me/524426098771" target="_blank" rel="noopener noreferrer">escríbenos por WhatsApp</a>.</p><button class="btn btn-primary" @click="cartOpen = false">Seguir explorando <ShopIcon name="arrow" /></button></div>
     </template>
     <template v-else-if="!count">
-      <div class="cart-empty"><ShopIcon name="bag" /><p v-if="result" class="pay-notice" :class="result.kind" role="alert">{{ result.kind === 'pending' ? 'Tu pago está en proceso. Te avisaremos cuando se acredite.' : 'El pago no se completó. Puedes intentar de nuevo cuando quieras.' }}</p><p class="eyebrow">TU PRÓXIMO DESCANSO EMPIEZA AQUÍ</p><h3>Tu carrito está vacío</h3><p>Explora nuestros blancos y encuentra lo que necesitas para tu alojamiento.</p><a href="#catalogo" class="btn btn-primary" @click="cartOpen = false">Explorar Catálogo <ShopIcon name="arrow" /></a></div>
+      <div class="cart-empty"><ShopIcon name="bag" /><p v-if="result" class="pay-notice" :class="result.kind" role="alert">{{ result.kind === 'pending' ? 'Tu pago está en proceso. Consulta su estado en Mercado Pago.' : 'El pago no se completó. Puedes intentar de nuevo cuando quieras.' }}</p><p class="eyebrow">TU PRÓXIMO DESCANSO EMPIEZA AQUÍ</p><h3>Tu carrito está vacío</h3><p>Explora nuestros blancos y encuentra lo que necesitas para tu alojamiento.</p><a href="#catalogo" class="btn btn-primary" @click="cartOpen = false">Explorar Catálogo <ShopIcon name="arrow" /></a></div>
     </template>
     <template v-else>
       <div class="cart-body">
         <div class="checkout-steps"><span :class="{ current: stage === 'cart' }">01 Carrito</span><span class="step-line"></span><span :class="{ current: stage === 'checkout' }">02 Revisión y pago</span></div>
         <button v-if="stage === 'checkout'" class="text-link back-link" @click="stage = 'cart'">← Volver al carrito</button>
-        <p v-if="result" class="pay-notice" :class="result.kind" role="alert">{{ result.kind === 'pending' ? 'Tu pago está en proceso (por ejemplo, OXXO o SPEI). Te avisaremos cuando se acredite; tu carrito sigue aquí por si necesitas volver a intentarlo.' : 'El pago no se completó. Puedes intentar de nuevo o pagar con otro medio.' }}</p>
+        <p v-if="result" class="pay-notice" :class="result.kind" role="alert">{{ result.kind === 'pending' ? 'Tu pago está en proceso (por ejemplo, OXXO o SPEI). Consulta su estado en Mercado Pago antes de intentar pagar de nuevo.' : 'El pago no se completó. Puedes intentar de nuevo o pagar con otro medio.' }}</p>
         <p class="cart-intro">{{ count }} {{ count === 1 ? 'artículo en tu selección' : 'artículos en tu selección' }}</p>
         <div class="cart-lines"><article v-for="item in lines" :key="item.key" class="cart-line"><img :src="item.product.images[0]" :alt="item.product.name" /><div class="cart-line-info"><h3>{{ item.product.name }}</h3><p>{{ item.option.name }} · {{ money(item.option.price) }} c/u</p><div v-if="stage === 'cart'" class="line-controls"><div class="quantity-picker"><button :aria-label="'Reducir cantidad de ' + item.product.name + ' ' + item.option.name" :disabled="item.quantity <= 1" @click="changeQuantity(item, -1)">−</button><span>{{ item.quantity }}</span><button :aria-label="'Aumentar cantidad de ' + item.product.name + ' ' + item.option.name" :disabled="item.quantity >= 99" @click="changeQuantity(item, 1)">+</button></div><button class="remove-button" :aria-label="'Eliminar ' + item.product.name + ' ' + item.option.name" @click="remove(item)">Eliminar</button></div><p v-else>Cantidad: {{ item.quantity }}</p></div><strong>{{ money(item.option.price * item.quantity) }}</strong></article></div>
         <template v-if="stage === 'checkout'">
           <fieldset class="buyer-fields"><legend>Tus datos</legend><label><span>Nombre</span><input v-model.trim="buyer.name" type="text" name="name" autocomplete="name" required maxlength="80" placeholder="Nombre y apellido"></label><label><span>Correo electrónico</span><input v-model.trim="buyer.email" type="email" name="email" autocomplete="email" required maxlength="120" placeholder="tu@correo.com"></label><label><span>WhatsApp</span><input v-model.trim="buyer.phone" type="tel" name="phone" inputmode="tel" autocomplete="tel" required maxlength="20" placeholder="442 000 0000"></label></fieldset>
-          <fieldset class="delivery-options"><legend>Entrega</legend><label :class="{ selected: delivery === 'pickup' }"><input v-model="delivery" type="radio" value="pickup" name="delivery"><span><strong>Recoger en Querétaro</strong><small>Con cita en nuestro punto de entrega.</small></span><ShopIcon name="pin" /></label><label :class="{ selected: delivery === 'arrange' }"><input v-model="delivery" type="radio" value="arrange" name="delivery"><span><strong>Coordinar entrega</strong><small>Costo y disponibilidad por confirmar.</small></span></label></fieldset>
+          <fieldset class="delivery-options"><legend>Entrega</legend><label :class="{ selected: delivery === 'pickup' }"><input v-model="delivery" type="radio" value="pickup" name="delivery"><span><strong>Recoger en Querétaro</strong><small>Con cita en nuestro punto de entrega.</small></span><ShopIcon name="pin" /></label><label :class="{ selected: delivery === 'arrange' }"><input v-model="delivery" type="radio" value="arrange" name="delivery"><span><strong>Coordinar entrega</strong><small>Envío no incluido en el pago. Costo y cobertura por confirmar.</small></span></label></fieldset>
+          <fieldset v-if="delivery === 'arrange'" class="buyer-fields"><legend>Dirección de entrega · México</legend>
+            <label v-for="field in shippingFields" :key="field.key"><span>{{ field.label }}</span><input v-model.trim="shipping[field.key]" type="text" :name="'shipping-' + field.key" :autocomplete="field.autocomplete" :required="field.required" :maxlength="field.max" :pattern="field.pattern" :inputmode="field.inputmode"></label>
+            <p class="demo-explanation">El pago cubre solo los productos. <a href="https://wa.me/524426098771" target="_blank" rel="noopener noreferrer">Contáctanos por WhatsApp</a> para confirmar el costo y la cobertura del envío antes de pagar.</p>
+          </fieldset>
           <div class="payment-preview"><div><span class="payment-brand">mercado pago</span><span class="secure-badge">Pago seguro</span></div><p>Al continuar te llevaremos a Mercado Pago para pagar con tarjeta, SPEI, OXXO o tu saldo. Regresarás aquí al terminar.</p></div>
         </template>
       </div>
-      <div class="cart-summary"><div><span>Subtotal</span><strong>{{ money(total) }} MXN</strong></div><div class="delivery-summary"><span>Entrega</span><span>Por confirmar</span></div><p v-if="payError" class="form-error" role="alert">{{ payError }}</p><button v-if="stage === 'cart'" class="btn btn-primary full-width" @click="stage = 'checkout'">Continuar con mi pedido <ShopIcon name="arrow" /></button><button v-else class="btn btn-primary full-width" :disabled="paying || !formValid" @click="pay">{{ paying ? 'Redirigiendo a Mercado Pago…' : 'Pagar con Mercado Pago' }} <ShopIcon name="arrow" /></button><p v-if="stage === 'checkout' && !formValid" class="demo-explanation">Completa tu nombre, correo y WhatsApp para continuar al pago.</p><button v-if="stage === 'cart'" class="continue-shopping" @click="cartOpen = false">Seguir comprando</button></div>
+      <div class="cart-summary"><div><span>Subtotal</span><strong>{{ money(total) }} MXN</strong></div><div class="delivery-summary"><span>Entrega</span><span>{{ stage === 'cart' ? 'Seleccionar al continuar' : delivery === 'pickup' ? 'Recoger con cita' : 'Envío aparte · por cotizar' }}</span></div><p v-if="payError" class="form-error" role="alert">{{ payError }}</p><button v-if="stage === 'cart'" class="btn btn-primary full-width" @click="stage = 'checkout'">Continuar con mi pedido <ShopIcon name="arrow" /></button><button v-else class="btn btn-primary full-width" :disabled="paying || !formValid" @click="pay">{{ paying ? 'Redirigiendo a Mercado Pago…' : 'Pagar con Mercado Pago' }} <ShopIcon name="arrow" /></button><p v-if="stage === 'checkout' && !formValid" class="demo-explanation">Completa tu nombre, correo y WhatsApp{{ delivery === 'arrange' ? ', y la dirección con código postal de 5 dígitos' : '' }} para continuar al pago.</p><button v-if="stage === 'cart'" class="continue-shopping" @click="cartOpen = false">Seguir comprando</button></div>
     </template>
   </ShopDialog>
 </template>
