@@ -33,7 +33,7 @@ Cada registro incluye productos, cantidades, precios, total, moneda, datos del c
 
 ## Activar correos de pedidos
 
-Cambio preparado el 2026-09-13. La contraseña de aplicación se guardó como secreto de Production en Netlify y la autenticación SMTP con Gmail se verificó sin enviar correo. Pendientes: despliegue y prueba real de recepción. El propietario pidió correos tanto para la tienda como para el cliente y confirmó `outletblancosqro@gmail.com` como remitente y destinatario de la tienda.
+Cambio preparado el 2026-09-13. La contraseña de aplicación se guardó como secreto de Production en Netlify y la autenticación SMTP con Gmail se verificó sin enviar correo. Publicado en producción con commit `f0faaa5` y deploy Netlify `6aa6f6353d9e9500088aa513`. La API real rechaza una entrega sin dirección y webhooks sin firma. Sigue pendiente una compra aprobada que verifique dirección guardada y recepción de ambos correos. El propietario pidió correos tanto para la tienda como para el cliente y confirmó `outletblancosqro@gmail.com` como remitente y destinatario de la tienda.
 
 1. En esa cuenta de Google, activa la verificación en dos pasos y crea una contraseña de aplicación para la tienda. Usa la [guía de Gmail SMTP](https://nodemailer.com/guides/using-gmail); la contraseña normal de Gmail no sirve para esta configuración.
 2. En Netlify → `outletqro` → Project configuration → Environment variables, guarda la contraseña de aplicación como `ORDER_EMAIL_APP_PASSWORD`, marcada como secreta y con alcance que incluya Functions en el contexto que vas a probar. El plan actual permite Builds, Functions y Runtime juntos para secretos. No la pegues en Git ni en el chat.

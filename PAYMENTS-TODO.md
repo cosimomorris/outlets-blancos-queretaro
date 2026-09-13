@@ -2,14 +2,15 @@
 
 ## Follow-up: shipping and email (2026-09-13)
 
-The owner requested shipping details and email notifications for both owner and customer, using `outletblancosqro@gmail.com` for sending and the owner's copy. Local changes add address collection/validation, address metadata and order storage, and Gmail SMTP notifications after verified payment approval. These changes are not yet deployed. The earlier no-email decision below records the initial release.
+The owner requested shipping details and email notifications for both owner and customer, using `outletblancosqro@gmail.com` for sending and the owner's copy. Local changes add address collection/validation, address metadata and order storage, and Gmail SMTP notifications after verified payment approval. Commit `f0faaa5` was published in production by Netlify deploy `6aa6f6353d9e9500088aa513` on 2026-09-13. The live API rejects delivery without an address (400 `bad_shipping`) and unsigned webhooks (401 `bad_signature`). The earlier no-email decision below records the initial release.
 
 - [x] Add required address fields for arranged delivery; pickup does not require an address. Shipping remains separately quoted and excluded from the payment.
 - [x] Implement separate customer and owner email sends, with per-recipient status, concurrent-send locks and retry handling.
 - [x] Local build and function bundling pass. Brave POTV checkout checks confirm pickup without address, delivery blocked without address, and payment enabled only with a valid 5-digit postal code and completed required address fields. These checks do not verify the deployed payment or email integration.
 - [x] Configure `ORDER_EMAIL_APP_PASSWORD` as a Netlify secret in Production only, with the plan’s available Builds, Functions and Runtime scopes. Gmail SMTP authentication verified directly without sending email. Saved through Brave Local Dev at the user’s explicit request.
 - [ ] For sandbox email verification, set `ORDER_EMAIL_TEST_TO` to a controlled inbox; both copies are redirected there.
-- [ ] Deploy and verify the full address survives Mercado Pago payment metadata into Netlify Blobs.
+- [x] Deploy shipping fields and email code to production. Netlify built the frontend and both functions successfully.
+- [ ] Verify the full address survives Mercado Pago payment metadata into Netlify Blobs after an approved payment.
 - [ ] Complete an authorized purchase and verify both email copies arrive with correct items, totals, and delivery information. Verify webhook replay does not resend a copy marked sent.
 
 
