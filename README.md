@@ -53,7 +53,7 @@ Netlify Blobs recibe acceso desde el entorno de la función; no necesita una cue
 
 La API de Preferences corresponde al código existente. Mercado Pago la etiqueta como legacy; su documentación indica que sigue soportada para integraciones existentes. Una migración a Orders debe tratarse como un cambio de integración completo.
 
-La versión pública previa se subió con Netlify Drop. Durante la configuración de pagos se bloqueó la publicación automática de ese despliegue para probar la nueva versión con su permalink. Antes de publicar, completa las comprobaciones de `PAYMENTS-TODO.md`; después publica la versión validada y reactiva la publicación automática.
+La tienda se publicó con credenciales reales el 13 de septiembre de 2026 por solicitud del propietario. Netlify publica automáticamente los cambios de `main`. La creación del checkout y la redirección a Mercado Pago se verificaron en producción. Un pago completado, el guardado del pedido y el reembolso siguen pendientes de verificación; consulta `PAYMENTS-TODO.md`.
 
 ## Verificación
 

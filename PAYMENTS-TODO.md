@@ -1,12 +1,14 @@
 # Mercado Pago go-live checklist
 
-Status as of 2026-09-13. The storefront builds locally. Payment handlers have been adapted for Netlify; both functions deploy successfully. The first deployed checkout request returned `mp_error` (HTTP 502); end-to-end payment and order-storage verification remains pending.
+Status as of 2026-09-13: published on Netlify with real Mercado Pago credentials at the user’s explicit request to go straight to production. Live checkout creation and browser redirect work. Completed payments, order persistence, and refunds remain unverified.
 
 Deployment discovery on 2026-09-13:
 - The existing public site is `https://outletblancosqro.com`, served by Netlify (verified from the live HTTP response headers).
 - Decision: keep Netlify, as requested by the user. Existing project: `outletqro`, team `cosimomorris`, account `morriscosimo@gmail.com`, site ID `8b531e7d-4a84-41b5-a93d-ed5c9459ddbe`. The prior deployment was a manual Netlify Drop upload, published February 8, 2026.
 - Use Brave's `Local Dev` profile for this task, as explicitly requested by the user.
-- Production build and `git diff --check` pass. No end-to-end payment or order persistence has been verified in this session.
+- Production build and `git diff --check` pass. Production deploy `6aa6f00c1250a05970bc6f94` published commit `8f63478`. Auto publishing from main is enabled.
+- Live API creates Mercado Pago checkout successfully (HTTP 200). The browser reached the real payment-method selection page for a $99 MXN Fundas order. No charge was submitted. Unsigned webhook POST returns HTTP 401 `bad_signature`.
+- Test-seller checkout returned HTTP 502 `mp_error`; the user then directed us to go straight to production. Sandbox purchase cases were not completed.
 
 Already true:
 - [x] Cart, checkout form, redirect to Mercado Pago, and return handling built (`src/App.vue`).
@@ -19,10 +21,10 @@ Already true:
 Log in with the Outlet Blancos account, then go to <https://www.mercadopago.com.mx/developers/panel/app>.
 
 - [x] **Create application.** `Outlet Blancos Tienda`, application ID `3680872779809361`, Checkout Pro / Preferences API. Created successfully after retrying a temporary Mercado Pago error. The panel labels Preferences as legacy; the reference says existing integrations remain supported.
-- [x] **Production credentials.** Phone verification completed; production Access Token is accessible. Store it only in Netlify secret environment variables, never in Git. Production has not switched to real credentials yet.
+- [x] **Production credentials.** Phone verification completed; production Access Token is accessible. Store it only in Netlify secret environment variables, never in Git. Netlify Production now uses the real token; other contexts retain the test seller token.
 - [x] **Webhook.** App → *Webhooks* → *Configurar notificaciones* → mode **Producción** → URL `https://outletblancosqro.com/api/mp-webhook` → event **Pagos** → save. Copy the **clave secreta**. This is `MP_WEBHOOK_SECRET`.
 - [x] **Test accounts.** The application contains a México test seller (`3687529346`) and buyer (`3687529348`). Retrieve their login details from *Cuentas de prueba*; do not commit credentials.
-- [x] **Test credentials.** Activated through this application’s *Credenciales de prueba* page. Test seller token and webhook secret saved as Netlify secret variables. Production context temporarily contains the test token while publishing remains locked.
+- [x] **Test credentials.** Activated through this application’s *Credenciales de prueba* page. Test seller token and webhook secret saved as Netlify secret variables. The temporary Production test token was replaced with the real token before publishing.
 - [ ] **Identity verification.** If the account has not been verified (INE, RFC, CURP), do it now. Production payments will not be enabled without it.
 - [ ] **Bank account.** In the Mercado Pago app add the business CLABE so sales can be withdrawn.
 
@@ -37,7 +39,7 @@ Log in with the Outlet Blancos account, then go to <https://www.mercadopago.com.
 - [x] Commit the storefront, payment handlers, and Netlify configuration. Commit `8f63478` pushed to main. Local environment files and unrelated scratch files are excluded.
 - [x] Connect `cosimomorris/outlets-blancos-queretaro` to the existing `outletqro` project. Do not create a duplicate site.
 - [x] Configure `netlify.toml`: build `npm run build`, publish `dist`, functions `api`, Node 22, esbuild. Both handlers export their existing `/api/...` route.
-- [ ] Add environment variables (Project configuration → Environment variables, Functions scope):
+- [x] Add environment variables (Project configuration → Environment variables; scope includes Functions). Tokens and webhook secrets are marked as secret values. `SITE_URL` is set only in Production:
 
   | Variable | Production | Deploy Previews / Development |
   | --- | --- | --- |
@@ -45,13 +47,13 @@ Log in with the Outlet Blancos account, then go to <https://www.mercadopago.com.
   | `MP_WEBHOOK_SECRET` | real webhook secret | test seller webhook secret |
   | `SITE_URL` | `https://outletblancosqro.com` | leave unset (falls back to the deployment URL) |
 
-- [ ] Deploy and validate using the deployment permalink before publishing. The existing production deploy `6988c8d37514a9414ead8c34` is locked while setup and tests are in progress; unlock and publish only after the checks pass. Production `SITE_URL` and the production webhook must use `https://outletblancosqro.com`.
+- [x] Publish production at the user’s explicit request to skip remaining sandbox tests. Production `SITE_URL` and webhook use `https://outletblancosqro.com`. The previous deploy `6988c8d37514a9414ead8c34` remains available in deploy history; auto publishing is enabled.
 - [x] Verify the test deployment webhook is publicly reachable. Both deployed API routes respond over HTTPS (GET → 405, Allow: POST). Mercado Pago delivery and signature verification remain unverified. The existing Netlify project had no access protection when inspected on 2026-09-13.
 - [x] Existing custom domain: `outletblancosqro.com`, served over HTTPS.
 
 ## 4. Test purchase (before real credentials)
 
-Use the test seller credentials in Production temporarily, or a preview with protection off.
+Remaining sandbox tests were deferred by the user’s instruction to go straight to production. Use Deploy Preview #1 with test credentials if resuming them; do not replace live credentials with test credentials.
 
 - [ ] Open the site, add two products, continue, fill name / email / WhatsApp, click **Pagar con Mercado Pago**.
 - [ ] On the Mercado Pago page, log in as the test *Comprador* (incognito). Pay with Visa `4075 5957 1648 3764`, CVV `123`, expiry `11/30`, cardholder name `APRO`.
@@ -63,9 +65,9 @@ Use the test seller credentials in Production temporarily, or a preview with pro
 
 ## 5. Go live
 
-- [ ] Swap Production env vars to the real Access Token and real webhook secret. Redeploy.
+- [x] Swap Production env vars to the real Access Token and real webhook secret. Redeploy.
 - [ ] Make one small real purchase, confirm the saved order, then refund it from the Mercado Pago dashboard (*Actividad* → payment → *Reembolsar*).
-- [ ] Remove the test-seller credentials from Production if they were used there.
+- [x] Remove the test-seller Access Token from Production. Test credentials remain only in non-production contexts.
 
 ## 6. Housekeeping
 
