@@ -12,6 +12,22 @@ npx netlify dev      # sitio, funciones y almacenamiento local
 
 Vincula el proyecto existente con `npx netlify link` antes de usar sus variables de entorno. `netlify.toml` configura el build (`npm run build`), la carpeta pública (`dist`), las funciones (`api`) y Node 22.
 
+## CI/CD
+
+GitHub Actions ejecuta `.github/workflows/ci.yml` en cada pull request dirigido a `main` y en cada push a `main`. El check **Build and API checks** usa Node 22, instala las dependencias del lockfile, carga los módulos de `api/` para detectar errores de sintaxis o imports y compila el sitio con Vite.
+
+Para ejecutar las mismas comprobaciones en local, usa Node 22:
+
+```bash
+npm ci
+npm run check:api
+npm run build
+```
+
+Estas comprobaciones no necesitan secretos ni verifican pagos, almacenamiento de pedidos o envío de correos. La verificación de esas integraciones se realiza en el sitio desplegado, como se indica al final de este documento.
+
+Netlify gestiona las vistas previas de los pull requests y el despliegue de producción al fusionar cambios en `main`, mediante su conexión con GitHub. El workflow de Actions no realiza un despliegue adicional. Para exigir que el check pase antes de fusionar, configura **Build and API checks** como obligatorio en una regla de protección de `main`.
+
 ## Flujo de pago
 
 1. El cliente agrega productos y llena nombre, correo y WhatsApp. Si elige coordinar entrega, también debe completar destinatario, calle y número, colonia, ciudad, estado y código postal de 5 dígitos. Interior y referencias son opcionales. El envío se cotiza aparte y no se cobra en este checkout.
