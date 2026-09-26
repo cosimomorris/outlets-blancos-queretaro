@@ -1,6 +1,6 @@
 <script setup>
 import { computed, nextTick, ref } from "vue";
-import { products, money, findVariant } from "../catalog";
+import { products, money, findVariant, wholesaleMinimumQuantity } from "../catalog";
 import ShopIcon from "./ShopIcon.vue";
 import ShopDialog from "./ShopDialog.vue";
 const emit = defineEmits(["add"]);
@@ -17,7 +17,7 @@ const variant = ref("");
 const photo = ref(0);
 const option = computed(() => findVariant(selected.value, variant.value));
 const wholesaleLink = computed(() => {
-  const message = `Hola, me interesa cotizar ${selected.value?.name}, tamaño ${option.value?.name}, a precio de mayoreo (${money(option.value?.wholesalePrice)} MXN). ¿Cuál es el pedido mínimo?`;
+  const message = `Hola, me interesa cotizar ${selected.value?.name}, tamaño ${option.value?.name}, a precio de mayoreo (${money(option.value?.wholesalePrice)} MXN por set, a partir de ${wholesaleMinimumQuantity} piezas).`;
   return `https://wa.me/524426098771?text=${encodeURIComponent(message)}`;
 });
 function openProduct(product) {
@@ -99,7 +99,7 @@ async function add() {
             </button>
           </div>
           <p v-if="product.variants[0].wholesalePrice" class="product-rates">
-            Menudeo · Mayoreo desde {{ money(product.variants[0].wholesalePrice) }} MXN
+            Menudeo · Mayoreo desde {{ money(product.variants[0].wholesalePrice) }} MXN (a partir de {{ wholesaleMinimumQuantity }} piezas)
           </p>
         </div>
       </article>
@@ -138,7 +138,7 @@ async function add() {
         <p v-if="selected.tagline" class="secondary-copy">{{ selected.tagline }}</p>
         <p v-if="selected.contents" class="secondary-copy">{{ selected.contents }}</p>
         <table v-if="selected.variants[0].wholesalePrice" class="price-table">
-          <caption>Precios {{ selected.category === 'Sábanas' ? 'por set ' : '' }}en MXN</caption>
+          <caption>Precios {{ selected.category === 'Sábanas' ? 'por set ' : '' }}en MXN · Mayoreo a partir de {{ wholesaleMinimumQuantity }} piezas</caption>
           <thead><tr><th scope="col">Tamaño</th><th scope="col">Menudeo</th><th scope="col">Mayoreo</th></tr></thead>
           <tbody>
             <tr v-for="item in selected.variants" :key="item.id" :class="{ 'selected-size': variant === item.id }">

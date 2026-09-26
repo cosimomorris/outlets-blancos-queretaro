@@ -1,5 +1,7 @@
 // Product catalog. Shared by the Vue app and the serverless API (api/), so keep it free of browser-only code.
 // Prices are MXN. The API re-derives every amount from this file; the client never sets prices.
+export const wholesaleMinimumQuantity = 12
+
 export const products = [
   {
     id: 'reacondicionadas', name: 'Sábanas reacondicionadas', category: 'Sábanas', label: 'Set de 4 piezas', detail: '2 sábanas planas + 2 fundas · 300 hilos',
@@ -9,10 +11,10 @@ export const products = [
     contents: 'Cada set incluye 2 sábanas planas y 2 fundas de almohada.',
     images: ['/images/catalog/bedroom.jpeg', '/images/catalog/reading.jpeg'],
     variants: [
-      { id: 'individual', name: 'Individual', price: 275, wholesalePrice: 250 },
-      { id: 'matrimonial', name: 'Matrimonial', price: 325, wholesalePrice: 280 },
-      { id: 'queen', name: 'Queen', price: 500, wholesalePrice: 400 },
-      { id: 'king', name: 'King', price: 600, wholesalePrice: 500 },
+      { id: 'individual', name: 'Individual', price: 250, wholesalePrice: 210 },
+      { id: 'matrimonial', name: 'Matrimonial', price: 320, wholesalePrice: 280 },
+      { id: 'queen', name: 'Queen', price: 420, wholesalePrice: 380 },
+      { id: 'king', name: 'King', price: 530, wholesalePrice: 480 },
     ],
   },
   {
@@ -20,16 +22,16 @@ export const products = [
     description: 'Set de sábanas nuevas: incluye 2 sábanas planas y 2 fundas de almohada. 180 hilos, 100% algodón.',
     images: ['/images/catalog/sabanas-nuevas.jpeg', '/images/catalog/pillowcases.jpeg'],
     variants: [
-      { id: 'matrimonial', name: 'Matrimonial', price: 280, wholesalePrice: 280 },
-      { id: 'queen', name: 'Queen', price: 400, wholesalePrice: 400 },
-      { id: 'king', name: 'King', price: 500, wholesalePrice: 500 },
+      { id: 'matrimonial', name: 'Matrimonial', price: 430, wholesalePrice: 380 },
+      { id: 'queen', name: 'Queen', price: 550, wholesalePrice: 520 },
+      { id: 'king', name: 'King', price: 650, wholesalePrice: 620 },
     ],
   },
   {
-    id: 'fundas', name: 'Fundas de Almohada', category: 'Fundas', label: '100% algodón', detail: 'Matrimonial y king size',
-    description: 'Fundas de almohada de algodón king size y matrimonial.',
+    id: 'fundas', name: 'Fundas de Almohada', category: 'Fundas', label: 'Paquete de 2 piezas', detail: '100% algodón · Matrimonial y king size',
+    description: 'Paquete de 2 fundas de almohada 100% algodón, disponible en tamaño matrimonial y king.',
     images: ['/images/catalog/pillowcases.jpeg', '/images/catalog/pillowcase-king.jpeg'],
-    variants: [{ id: 'matrimonial', name: 'Matrimonial', price: 99 }, { id: 'king', name: 'King size', price: 129 }],
+    variants: [{ id: 'matrimonial', name: 'Matrimonial', price: 100 }, { id: 'king', name: 'King size', price: 120 }],
   },
 ]
 export const findVariant = (product, variantId) => product?.variants.find(v => v.id === variantId)
